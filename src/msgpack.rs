@@ -8,6 +8,16 @@ pub fn write_i32(out: &mut Vec<u8>, value: i32) {
     write_i64(out, value as i64);
 }
 
+pub fn write_i8(out: &mut Vec<u8>, value: i8) {
+    out.push(0xd0);
+    out.push(value as u8);
+}
+
+pub fn write_i16(out: &mut Vec<u8>, value: i16) {
+    out.push(0xd1);
+    out.extend_from_slice(&value.to_be_bytes());
+}
+
 pub fn write_i64(out: &mut Vec<u8>, value: i64) {
     if (0..=0x7f).contains(&value) {
         out.push(value as u8);
@@ -26,6 +36,16 @@ pub fn write_i64(out: &mut Vec<u8>, value: i64) {
         out.push(0xd3);
         out.extend_from_slice(&value.to_be_bytes());
     }
+}
+
+pub fn write_f32(out: &mut Vec<u8>, value: f32) {
+    out.push(0xca);
+    out.extend_from_slice(&value.to_be_bytes());
+}
+
+pub fn write_f64(out: &mut Vec<u8>, value: f64) {
+    out.push(0xcb);
+    out.extend_from_slice(&value.to_be_bytes());
 }
 
 pub fn write_str(out: &mut Vec<u8>, value: &str) -> Result<()> {
@@ -131,6 +151,14 @@ impl<'a> MsgpackReader<'a> {
         Ok(i32::try_from(self.read_i64()?)?)
     }
 
+    pub fn read_i8(&mut self) -> Result<i8> {
+        Ok(i8::try_from(self.read_i64()?)?)
+    }
+
+    pub fn read_i16(&mut self) -> Result<i16> {
+        Ok(i16::try_from(self.read_i64()?)?)
+    }
+
     pub fn read_i64(&mut self) -> Result<i64> {
         let marker = self.read_u8()?;
         match marker {
@@ -145,6 +173,24 @@ impl<'a> MsgpackReader<'a> {
             0xd3 => Ok(i64::from_be_bytes(self.read_array()?)),
             0xe0..=0xff => Ok((marker as i8) as i64),
             _ => Err(MsgpackError::Msgpack("expected integer")),
+        }
+    }
+
+    pub fn read_f32(&mut self) -> Result<f32> {
+        let marker = self.read_u8()?;
+        match marker {
+            0xca => Ok(f32::from_be_bytes(self.read_array()?)),
+            0xcb => Ok(f64::from_be_bytes(self.read_array()?) as f32),
+            _ => Err(MsgpackError::Msgpack("expected float")),
+        }
+    }
+
+    pub fn read_f64(&mut self) -> Result<f64> {
+        let marker = self.read_u8()?;
+        match marker {
+            0xca => Ok(f32::from_be_bytes(self.read_array()?) as f64),
+            0xcb => Ok(f64::from_be_bytes(self.read_array()?)),
+            _ => Err(MsgpackError::Msgpack("expected float")),
         }
     }
 
