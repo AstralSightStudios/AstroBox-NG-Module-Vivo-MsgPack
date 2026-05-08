@@ -83,8 +83,8 @@
         },
         {
           "name": "features",
-          "rust_type": "Vec<FeatureItem>",
-          "write": "array_bin_payload"
+          "rust_type": "Option<Vec<FeatureItem>>",
+          "write": "optional_array_bin_payload"
         }
       ]
     }

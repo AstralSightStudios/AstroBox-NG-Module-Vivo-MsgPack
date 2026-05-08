@@ -845,6 +845,18 @@ fn emit_manual_write(out: &mut String, field: &ManualField, out_name: &str, inde
             ));
             out.push_str(&format!("{prefix}}}\n"));
         }
+        "optional_array_bin_payload" => {
+            out.push_str(&format!("{prefix}if let Some(values) = &{access} {{\n"));
+            out.push_str(&format!(
+                "{prefix}    write_array_len(&mut {out_name}, values.len())?;\n"
+            ));
+            out.push_str(&format!("{prefix}    for value in values {{\n"));
+            out.push_str(&format!(
+                "{prefix}        write_bin(&mut {out_name}, &value.payload()?)?;\n"
+            ));
+            out.push_str(&format!("{prefix}    }}\n"));
+            out.push_str(&format!("{prefix}}}\n"));
+        }
         "str_non_empty_or" => {
             let fallback = rust_literal(field.fallback.as_deref().unwrap_or_default());
             out.push_str(&format!(
