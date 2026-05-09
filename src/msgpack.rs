@@ -117,6 +117,10 @@ impl<'a> MsgpackReader<'a> {
         self.pos
     }
 
+    pub fn peek_marker(&self) -> Option<u8> {
+        self.buf.get(self.pos).copied()
+    }
+
     fn read_u8(&mut self) -> Result<u8> {
         let byte = *self
             .buf
