@@ -19,17 +19,36 @@ pub fn write_i16(out: &mut Vec<u8>, value: i16) {
 }
 
 pub fn write_i64(out: &mut Vec<u8>, value: i64) {
-    if (0..=0x7f).contains(&value) {
-        out.push(value as u8);
-    } else if (-32..=-1).contains(&value) {
+    // 与 msgpack-java `MessagePacker.packLong` 的行为对齐：非负数走 uint 系列
+    // (0xcc/0xcd/0xce/0xcf)，负数走 int 系列 (0xd0/0xd1/0xd2/0xd3)。
+    // Vivo 手表端的 msgpack 解码器对 marker 敏感，正数若用 0xd2 (int32)
+    // 会被部分命令静默丢弃（如 BID 1 / CID 1 DialInstallBleRequest）。
+    if value >= 0 {
+        let v = value as u64;
+        if v <= 0x7f {
+            out.push(v as u8);
+        } else if v <= u8::MAX as u64 {
+            out.push(0xcc);
+            out.push(v as u8);
+        } else if v <= u16::MAX as u64 {
+            out.push(0xcd);
+            out.extend_from_slice(&(v as u16).to_be_bytes());
+        } else if v <= u32::MAX as u64 {
+            out.push(0xce);
+            out.extend_from_slice(&(v as u32).to_be_bytes());
+        } else {
+            out.push(0xcf);
+            out.extend_from_slice(&v.to_be_bytes());
+        }
+    } else if value >= -32 {
         out.push(value as i8 as u8);
-    } else if (i8::MIN as i64..=i8::MAX as i64).contains(&value) {
+    } else if value >= i8::MIN as i64 {
         out.push(0xd0);
         out.push(value as i8 as u8);
-    } else if (i16::MIN as i64..=i16::MAX as i64).contains(&value) {
+    } else if value >= i16::MIN as i64 {
         out.push(0xd1);
         out.extend_from_slice(&(value as i16).to_be_bytes());
-    } else if (i32::MIN as i64..=i32::MAX as i64).contains(&value) {
+    } else if value >= i32::MIN as i64 {
         out.push(0xd2);
         out.extend_from_slice(&(value as i32).to_be_bytes());
     } else {
